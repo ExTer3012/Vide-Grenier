@@ -24,6 +24,8 @@ services:
     image: mysql:8.0
     container_name: vgl_db_prod
     restart: always
+    env_file:
+      - .env.prod
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -35,10 +37,11 @@ services:
       - ./sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql
     # Pas de port exposé en prod : DB inaccessible depuis l'extérieur
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$DB_ROOT_PASSWORD --silent"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     networks:
       - vgl_network
 
