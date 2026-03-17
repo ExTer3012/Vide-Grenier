@@ -1,0 +1,21 @@
+# Dépendances (installées dans l'image)
+vendor/
+node_modules/
+
+# Fichiers d'environnement (ne jamais inclure dans l'image)
+.env
+.env.dev
+.env.staging
+.env.prod
+
+# Git
+.git/
+.gitignore
+
+# Outils de dev
+.idea/
+*.log
+
+# Fichiers uploadés (persistés via volume en prod)
+public/storage/*
+!public/storage/.gitkeep

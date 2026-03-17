@@ -1,3 +1,18 @@
-vendor
-.idea
+vendor/
+node_modules/
+.idea/
 composer.lock
+
+# Variables d'environnement — NE JAMAIS commiter
+.env
+.env.dev
+.env.staging
+.env.prod
+# .env.example EST commité (template sans valeurs sensibles)
+
+# Fichiers uploadés
+public/storage/*
+!public/storage/.gitkeep
+
+# Logs
+*.log
