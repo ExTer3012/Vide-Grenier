@@ -4,39 +4,54 @@ namespace App;
 
 /**
  * Application configuration
- *
- * PHP version 7.0
+ * Lit la configuration depuis les variables d'environnement.
+ * Ne jamais mettre de valeurs en dur dans ce fichier.
  */
 class Config
 {
+    /** Base de données */
+    const DB_HOST     = DB_HOST;
+    const DB_NAME     = DB_NAME;
+    const DB_USER     = DB_USER;
+    const DB_PASSWORD = DB_PASSWORD;
+
+    /** Environnement applicatif */
+    const APP_ENV   = APP_ENV;
+    const APP_DEBUG = APP_DEBUG;
+
+    /** Niveau de log : ERROR, WARNING, INFO, DEBUG */
+    const LOG_LEVEL = LOG_LEVEL;
+
+    /** Session */
+    const SESSION_LIFETIME = SESSION_LIFETIME;
+    const SESSION_SECURE   = SESSION_SECURE;
+
+    /** Upload */
+    const UPLOAD_MAX_SIZE = UPLOAD_MAX_SIZE;
+    const UPLOAD_PATH     = UPLOAD_PATH;
 
     /**
-     * Database host
-     * @var string
+     * Lit une variable d'environnement avec valeur par défaut.
      */
-    const DB_HOST = 'localhost';
+    public static function env(string $key, $default = null)
+    {
+        $value = getenv($key);
+        return ($value !== false) ? $value : $default;
+    }
 
     /**
-     * Database name
-     * @var string
+     * Retourne true si l'application est en mode développement.
      */
-    const DB_NAME = 'videgrenierenligne';
+    public static function isDev(): bool
+    {
+        return self::env('APP_ENV', 'prod') === 'dev';
+    }
 
     /**
-     * Database user
-     * @var string
+     * Retourne true si les erreurs doivent être affichées.
      */
-    const DB_USER = 'webapplication';
-
-    /**
-     * Database password
-     * @var string
-     */
-    const DB_PASSWORD = '653rag9T';
-
-    /**
-     * Show or hide error messages on screen
-     * @var boolean
-     */
-    const SHOW_ERRORS = true;
+    public static function showErrors(): bool
+    {
+        return filter_var(self::env('APP_DEBUG', 'false'), FILTER_VALIDATE_BOOLEAN);
+    }
 }
