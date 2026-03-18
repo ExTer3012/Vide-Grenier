@@ -139,7 +139,7 @@ class UserValidationTest extends TestCase
             'email_invalide'             => ['Jean', 'pas-un-email', 'password123', 'password123', 1],
             'mdp_trop_court'             => ['Jean', 'j@test.fr',    '1234567',     '1234567',     1],
             'mdp_non_correspondants'     => ['Jean', 'j@test.fr',    'password123', 'different',   1],
-            'tout_invalide'              => ['J',    'invalide',     '123',         'xyz',         3],
+            'tout_invalide'              => ['J',    'invalide',     '123',         'xyz',         4],
         ];
     }
 
