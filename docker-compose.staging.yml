@@ -12,6 +12,11 @@ services:
       - "8081:80"
     env_file:
       - .env
+    environment:
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      LOG_LEVEL: WARNING
+      SESSION_SECURE: "true"
     depends_on:
       db:
         condition: service_healthy

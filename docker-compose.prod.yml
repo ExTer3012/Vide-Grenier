@@ -12,6 +12,11 @@ services:
       - "80:80"
     env_file:
       - .env
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "false"
+      LOG_LEVEL: ERROR
+      SESSION_SECURE: "true"
     depends_on:
       db:
         condition: service_healthy

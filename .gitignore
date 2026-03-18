@@ -8,7 +8,7 @@ composer.lock
 
 # .env.example EST commite (template sans valeurs sensibles)
 
-# Fichiers uploadés
+# Fichiers uploades
 public/storage/*
 !public/storage/.gitkeep
 
