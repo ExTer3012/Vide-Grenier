@@ -38,7 +38,7 @@ cd vide-grenier-en-ligne
 
 ```bash
 # Copier le template et adapter les valeurs
-cp .env.example .env.dev
+cp .env.example .env
 ```
 
 Les variables disponibles sont décrites dans `.env.example`. Les fichiers `.env.dev`, `.env.staging` et `.env.prod` ne sont **jamais commités**.
