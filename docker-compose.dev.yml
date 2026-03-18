@@ -41,10 +41,10 @@ services:
       - ./sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_ROOT_PASSWORD} --silent"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - vgl_network
 
