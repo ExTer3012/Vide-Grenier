@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vgl_app:latest
+    container_name: vgl_app_prod
+    restart: always
+    volumes:
+      - ./public/storage:/var/www/html/public/storage
+    ports:
+      - "8082:80"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "false"
+      LOG_LEVEL: ERROR
+      SESSION_SECURE: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vgl_network
+
+  db:
+    image: mysql:8.0
+    container_name: vgl_db_prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - vgl_db_prod:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - vgl_network
+
+volumes:
+  vgl_db_prod:
+
+networks:
+  vgl_network:
+    driver: bridge

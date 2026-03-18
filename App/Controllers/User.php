@@ -2,160 +2,269 @@
 
 namespace App\Controllers;
 
-use App\Config;
-use App\Model\UserRegister;
 use App\Models\Articles;
+use App\Models\User as UserModel;
+use App\Utility\Csrf;
 use App\Utility\Hash;
-use App\Utility\Session;
-use \Core\View;
+use Core\Error;
+use Core\View;
 use Exception;
-use http\Env\Request;
-use http\Exception\InvalidArgumentException;
 
 /**
- * User controller
+ * Contrôleur User — login, register, account, logout
  */
 class User extends \Core\Controller
 {
-
     /**
-     * Affiche la page de login
+     * Affiche et traite le formulaire de connexion.
      */
-    public function loginAction()
+    public function loginAction(): void
     {
-        if(isset($_POST['submit'])){
-            $f = $_POST;
-
-            // TODO: Validation
-
-            $this->login($f);
-
-            // Si login OK, redirige vers le compte
-            header('Location: /account');
-        }
-
-        View::renderTemplate('User/login.html');
-    }
-
-    /**
-     * Page de création de compte
-     */
-    public function registerAction()
-    {
-        if(isset($_POST['submit'])){
-            $f = $_POST;
-
-            if($f['password'] !== $f['password-check']){
-                // TODO: Gestion d'erreur côté utilisateur
+        if (isset($_POST['submit'])) {
+            // Validation CSRF
+            if (!Csrf::validate($_POST['csrf_token'] ?? null)) {
+                Error::log('WARNING', "Tentative CSRF sur /login depuis IP: " . ($_SERVER['REMOTE_ADDR'] ?? ''));
+                $this->redirectWithError('/login', 'Requête invalide, veuillez réessayer.');
+                return;
             }
 
-            // validation
+            $email    = trim($_POST['email']    ?? '');
+            $password = trim($_POST['password'] ?? '');
 
-            $this->register($f);
-            // TODO: Rappeler la fonction de login pour connecter l'utilisateur
+            // Validation basique
+            if (empty($email) || empty($password)) {
+                View::renderTemplate('User/login.html', [
+                    'error'      => 'Email et mot de passe obligatoires.',
+                    'csrf_token' => Csrf::getToken(),
+                ]);
+                return;
+            }
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                View::renderTemplate('User/login.html', [
+                    'error'      => 'Format d\'email invalide.',
+                    'csrf_token' => Csrf::getToken(),
+                ]);
+                return;
+            }
+
+            try {
+                $success = $this->login($email, $password);
+
+                if ($success) {
+                    Csrf::regenerate();
+                    header('Location: /account');
+                    exit;
+                }
+
+                View::renderTemplate('User/login.html', [
+                    'error'      => 'Email ou mot de passe incorrect.',
+                    'csrf_token' => Csrf::getToken(),
+                ]);
+
+            } catch (Exception $e) {
+                Error::log('ERROR', "Erreur login : " . $e->getMessage());
+                View::renderTemplate('User/login.html', [
+                    'error'      => 'Une erreur est survenue, veuillez réessayer.',
+                    'csrf_token' => Csrf::getToken(),
+                ]);
+            }
+
+            return;
         }
 
-        View::renderTemplate('User/register.html');
-    }
-
-    /**
-     * Affiche la page du compte
-     */
-    public function accountAction()
-    {
-        $articles = Articles::getByUser($_SESSION['user']['id']);
-
-        View::renderTemplate('User/account.html', [
-            'articles' => $articles
+        View::renderTemplate('User/login.html', [
+            'csrf_token' => Csrf::getToken(),
         ]);
     }
 
-    /*
-     * Fonction privée pour enregister un utilisateur
+    /**
+     * Affiche et traite le formulaire d'inscription.
      */
-    private function register($data)
+    public function registerAction(): void
     {
-        try {
-            // Generate a salt, which will be applied to the during the password
-            // hashing process.
-            $salt = Hash::generateSalt(32);
-
-            $userID = \App\Models\User::createUser([
-                "email" => $data['email'],
-                "username" => $data['username'],
-                "password" => Hash::generate($data['password'], $salt),
-                "salt" => $salt
-            ]);
-
-            return $userID;
-
-        } catch (Exception $ex) {
-            // TODO : Set flash if error : utiliser la fonction en dessous
-            /* Utility\Flash::danger($ex->getMessage());*/
-        }
-    }
-
-    private function login($data){
-        try {
-            if(!isset($data['email'])){
-                throw new Exception('TODO');
+        if (isset($_POST['submit'])) {
+            // Validation CSRF
+            if (!Csrf::validate($_POST['csrf_token'] ?? null)) {
+                Error::log('WARNING', "Tentative CSRF sur /register depuis IP: " . ($_SERVER['REMOTE_ADDR'] ?? ''));
+                $this->redirectWithError('/register', 'Requête invalide, veuillez réessayer.');
+                return;
             }
 
-            $user = \App\Models\User::getByLogin($data['email']);
+            $username  = trim($_POST['username']       ?? '');
+            $email     = trim($_POST['email']          ?? '');
+            $password  = trim($_POST['password']       ?? '');
+            $passCheck = trim($_POST['password-check'] ?? '');
 
-            if (Hash::generate($data['password'], $user['salt']) !== $user['password']) {
-                return false;
+            $errors = $this->validateRegister($username, $email, $password, $passCheck);
+
+            if (!empty($errors)) {
+                View::renderTemplate('User/register.html', [
+                    'errors'     => $errors,
+                    'old'        => ['username' => $username, 'email' => $email],
+                    'csrf_token' => Csrf::getToken(),
+                ]);
+                return;
             }
 
-            // TODO: Create a remember me cookie if the user has selected the option
-            // to remained logged in on the login form.
-            // https://github.com/andrewdyer/php-mvc-register-login/blob/development/www/app/Model/UserLogin.php#L86
+            try {
+                if (UserModel::emailExists($email)) {
+                    View::renderTemplate('User/register.html', [
+                        'errors'     => ['Cet email est déjà utilisé.'],
+                        'old'        => ['username' => $username, 'email' => $email],
+                        'csrf_token' => Csrf::getToken(),
+                    ]);
+                    return;
+                }
 
-            $_SESSION['user'] = array(
-                'id' => $user['id'],
-                'username' => $user['username'],
-            );
+                $userId = UserModel::createUser([
+                    'email'    => $email,
+                    'username' => $username,
+                    'password' => Hash::hashPassword($password),
+                ]);
 
-            return true;
+                // Connexion automatique après inscription
+                $this->login($email, $password);
+                Csrf::regenerate();
 
-        } catch (Exception $ex) {
-            // TODO : Set flash if error
-            /* Utility\Flash::danger($ex->getMessage());*/
+                header('Location: /account');
+                exit;
+
+            } catch (Exception $e) {
+                Error::log('ERROR', "Erreur register : " . $e->getMessage());
+                View::renderTemplate('User/register.html', [
+                    'errors'     => ['Une erreur est survenue, veuillez réessayer.'],
+                    'old'        => ['username' => $username, 'email' => $email],
+                    'csrf_token' => Csrf::getToken(),
+                ]);
+            }
+
+            return;
         }
-    }
 
+        View::renderTemplate('User/register.html', [
+            'csrf_token' => Csrf::getToken(),
+        ]);
+    }
 
     /**
-     * Logout: Delete cookie and session. Returns true if everything is okay,
-     * otherwise turns false.
-     * @access public
-     * @return boolean
-     * @since 1.0.2
+     * Affiche le compte de l'utilisateur connecté.
      */
-    public function logoutAction() {
+    public function accountAction(): void
+    {
+        try {
+            $articles = Articles::getByUser($_SESSION['user']['id']);
+        } catch (Exception $e) {
+            Error::log('ERROR', "Erreur accountAction : " . $e->getMessage());
+            $articles = [];
+        }
 
-        /*
-        if (isset($_COOKIE[$cookie])){
-            // TODO: Delete the users remember me cookie if one has been stored.
-            // https://github.com/andrewdyer/php-mvc-register-login/blob/development/www/app/Model/UserLogin.php#L148
-        }*/
-        // Destroy all data registered to the session.
+        View::renderTemplate('User/account.html', [
+            'articles' => $articles,
+        ]);
+    }
 
-        $_SESSION = array();
+    /**
+     * Déconnecte l'utilisateur.
+     */
+    public function logoutAction(): void
+    {
+        $_SESSION = [];
 
-        if (ini_get("session.use_cookies")) {
+        if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000,
-                $params["path"], $params["domain"],
-                $params["secure"], $params["httponly"]
+            setcookie(
+                session_name(), '',
+                time() - 42000,
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
             );
         }
 
         session_destroy();
+        header('Location: /');
+        exit;
+    }
 
-        header ("Location: /");
+    // -------------------------------------------------------------------------
+    // Méthodes privées
+    // -------------------------------------------------------------------------
+
+    /**
+     * Authentifie un utilisateur et initialise la session.
+     *
+     * @return bool true si succès
+     * @throws Exception
+     */
+    private function login(string $email, string $password): bool
+    {
+        $user = UserModel::getByEmail($email);
+
+        if (!$user) {
+            return false;
+        }
+
+        if (!Hash::verifyPassword($password, $user['password'])) {
+            Error::log('WARNING', "Échec de connexion pour : {$email}");
+            return false;
+        }
+
+        // Rehash si les paramètres Argon2 ont changé
+        if (Hash::needsRehash($user['password'])) {
+            UserModel::updatePassword($user['id'], Hash::hashPassword($password));
+            Error::log('INFO', "Rehash du mot de passe pour : {$email}");
+        }
+
+        session_regenerate_id(true);
+
+        $_SESSION['user'] = [
+            'id'       => $user['id'],
+            'username' => $user['username'],
+            'is_admin' => (bool) $user['is_admin'],
+        ];
+
+        Error::log('INFO', "Connexion réussie : {$email}");
 
         return true;
     }
 
+    /**
+     * Valide les champs du formulaire d'inscription.
+     *
+     * @return string[] Liste d'erreurs (vide si OK)
+     */
+    private function validateRegister(string $username, string $email, string $password, string $passCheck): array
+    {
+        $errors = [];
+
+        if (empty($username) || strlen($username) < 2) {
+            $errors[] = 'Le nom d\'utilisateur doit faire au moins 2 caractères.';
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Format d\'email invalide.';
+        }
+
+        if (strlen($password) < 8) {
+            $errors[] = 'Le mot de passe doit faire au moins 8 caractères.';
+        }
+
+        if ($password !== $passCheck) {
+            $errors[] = 'Les mots de passe ne correspondent pas.';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Redirige avec un message d'erreur en session flash.
+     */
+    private function redirectWithError(string $url, string $message): void
+    {
+        $_SESSION['flash_error'] = $message;
+        header('Location: ' . $url);
+        exit;
+    }
 }

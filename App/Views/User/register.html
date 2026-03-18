@@ -23,34 +23,71 @@
                 <div class="l-head">
                     Créer un compte
                 </div>
+
+                {% if errors is defined and errors %}
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">
+                        {% for error in errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
                 <div class="l-form">
                     <form method="post" action="">
+
+                        {# Token CSRF — obligatoire #}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
                         <div class="form-group">
                             <label for="username">Nom d'utilisateur</label>
-                            <input type="text" class="form-control" id="username" name="username"
-                                   placeholder="John Doe">
+                            <input type="text"
+                                   class="form-control"
+                                   id="username"
+                                   name="username"
+                                   placeholder="John Doe"
+                                   value="{{ old.username ?? '' }}"
+                                   required
+                                   minlength="2">
                         </div>
                         <div class="form-group">
-                            <label for="exampleInputEmail1">Email</label>
-                            <input type="email" class="form-control" id="exampleInputEmail1" name="email"
-                                   placeholder="exemple@gmail.com">
+                            <label for="email">Email</label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="email"
+                                   name="email"
+                                   placeholder="exemple@gmail.com"
+                                   value="{{ old.email ?? '' }}"
+                                   required>
                         </div>
                         <div class="form-group">
-                            <label for="exampleInputPassword1">Mot de passe</label>
-                            <input type="password" class="form-control" id="exampleInputPassword1"
-                                   placeholder="**********" name="password">
+                            <label for="password">Mot de passe</label>
+                            <input type="password"
+                                   class="form-control"
+                                   id="password"
+                                   name="password"
+                                   placeholder="**********"
+                                   required
+                                   minlength="8">
                         </div>
                         <div class="form-group">
-                            <label for="exampleInputPassword2">Votre mot de passe à nouveau</label>
-                            <input type="password" class="form-control" id="exampleInputPassword2"
-                                   placeholder="**********" name="password-check">
+                            <label for="password-check">Confirmer le mot de passe</label>
+                            <input type="password"
+                                   class="form-control"
+                                   id="password-check"
+                                   name="password-check"
+                                   placeholder="**********"
+                                   required
+                                   minlength="8">
                         </div>
                         <div class="row">
-                            <div class="col-lg-7"><button type="submit" name="submit" class="btn btn-cv1">Valider
-                            </button></div>
+                            <div class="col-lg-7">
+                                <button type="submit" name="submit" class="btn btn-cv1">Valider</button>
+                            </div>
                             <div class="hidden-xs">
                                 <div class="col-lg-1 ortext">ou</div>
-                                <div class="col-lg-4 signuptext"><a href="login.html">Connexion</a></div>
+                                <div class="col-lg-4 signuptext"><a href="/login">Connexion</a></div>
                             </div>
                         </div>
                         <div class="visible-xs text-center mt-30">

@@ -4,63 +4,103 @@ namespace App\Models;
 
 use App\Utility\Hash;
 use Core\Model;
-use App\Core;
+use Core\Error;
 use Exception;
-use App\Utility;
 
 /**
- * User Model:
+ * Modèle User
  */
-class User extends Model {
-
+class User extends Model
+{
     /**
-     * Crée un utilisateur
+     * Crée un utilisateur en base.
+     *
+     * @param array $data ['username', 'email', 'password' (déjà hashé)]
+     * @return int ID du nouvel utilisateur
+     * @throws Exception
      */
-    public static function createUser($data) {
-        $db = static::getDB();
-
-        $stmt = $db->prepare('INSERT INTO users(username, email, password, salt) VALUES (:username, :email, :password,:salt)');
-
-        $stmt->bindParam(':username', $data['username']);
-        $stmt->bindParam(':email', $data['email']);
-        $stmt->bindParam(':password', $data['password']);
-        $stmt->bindParam(':salt', $data['salt']);
-
-        $stmt->execute();
-
-        return $db->lastInsertId();
-    }
-
-    public static function getByLogin($login)
+    public static function createUser(array $data): int
     {
         $db = static::getDB();
 
-        $stmt = $db->prepare("
-            SELECT * FROM users WHERE ( users.email = :email) LIMIT 1
-        ");
+        $stmt = $db->prepare('
+            INSERT INTO users (username, email, password)
+            VALUES (:username, :email, :password)
+        ');
 
-        $stmt->bindParam(':email', $login);
+        $stmt->bindParam(':username', $data['username']);
+        $stmt->bindParam(':email',    $data['email']);
+        $stmt->bindParam(':password', $data['password']);
+
+        $stmt->execute();
+
+        Error::log('INFO', "Nouvel utilisateur créé : " . $data['email']);
+
+        return (int) $db->lastInsertId();
+    }
+
+    /**
+     * Récupère un utilisateur par son email.
+     *
+     * @param string $email
+     * @return array|false
+     * @throws Exception
+     */
+    public static function getByEmail(string $email)
+    {
+        $db = static::getDB();
+
+        $stmt = $db->prepare('
+            SELECT id, username, email, password, is_admin
+            FROM users
+            WHERE email = :email
+            LIMIT 1
+        ');
+
+        $stmt->bindParam(':email', $email);
         $stmt->execute();
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 
-
     /**
-     * ?
-     * @access public
-     * @return string|boolean
+     * Vérifie si un email est déjà utilisé.
+     *
+     * @param string $email
+     * @return bool
      * @throws Exception
      */
-    public static function login() {
+    public static function emailExists(string $email): bool
+    {
         $db = static::getDB();
 
-        $stmt = $db->prepare('SELECT * FROM articles WHERE articles.id = ? LIMIT 1');
+        $stmt = $db->prepare('
+            SELECT COUNT(id) FROM users WHERE email = :email
+        ');
 
-        $stmt->execute([$id]);
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
 
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return (int) $stmt->fetchColumn() > 0;
     }
 
+    /**
+     * Met à jour le hash du mot de passe (rehash si nécessaire).
+     *
+     * @param int    $userId
+     * @param string $newHash
+     * @throws Exception
+     */
+    public static function updatePassword(int $userId, string $newHash): void
+    {
+        $db = static::getDB();
 
+        $stmt = $db->prepare('
+            UPDATE users SET password = :password WHERE id = :id
+        ');
+
+        $stmt->bindParam(':password', $newHash);
+        $stmt->bindParam(':id',       $userId, \PDO::PARAM_INT);
+        $stmt->execute();
+    }
 }

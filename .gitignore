@@ -1,3 +1,19 @@
-vendor
-.idea
+vendor/
+node_modules/
+.idea/
 composer.lock
+
+# Fichier d'environnement — NE JAMAIS commiter
+.env
+
+# .env.example EST commite (template sans valeurs sensibles)
+
+# Fichiers uploades
+public/storage/*
+!public/storage/.gitkeep
+
+# Logs
+*.log
+cache/twig/*
+
+!cache/twig/.gitkeep

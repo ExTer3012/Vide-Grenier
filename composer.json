@@ -1,13 +1,25 @@
 {
-    "require": {
-        "twig/twig": "~3.0",
-      "ext-pdo": "*",
-      "ext-json": "*"
-    },
-    "autoload": {
-        "psr-4": {
-            "Core\\": "Core/",
-            "App\\": "App/"
-        }
+  "require": {
+    "php": ">=8.1",
+    "twig/twig": "^3.0",
+    "ext-pdo": "*",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Core\\": "Core/",
+      "App\\": "App/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit --testdox"
+  }
 }
