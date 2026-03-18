@@ -2,66 +2,52 @@
 
 namespace Core;
 
+use App\Config;
+
 /**
- * View
- *
- * PHP version 7.0
+ * View — rendu des templates Twig
  */
 class View
 {
-
-    /**
-     * Render a view file
-     *
-     * @param string $view  The view file
-     * @param array $args  Associative array of data to display in the view (optional)
-     *
-     * @return void
-     */
-    public static function render($view, $args = [])
-    {
-        extract($args, EXTR_SKIP);
-
-        $file = dirname(__DIR__) . "/App/Views/$view";  // relative to Core directory
-
-        if (is_readable($file)) {
-            require $file;
-        } else {
-            throw new \Exception("$file not found");
-        }
-    }
-
     /**
      * Render a view template using Twig
      *
      * @param string $template  The template file
-     * @param array $args  Associative array of data to display in the view (optional)
+     * @param array  $args      Associative array of data to display in the view
      *
      * @return void
      */
-    public static function renderTemplate($template, $args = [])
+    public static function renderTemplate(string $template, array $args = []): void
     {
         static $twig = null;
 
         if ($twig === null) {
-            $loader = new \Twig\Loader\Filesystemloader(dirname(__DIR__) . '/App/Views');
-            $twig = new \Twig\Environment($loader, ['debug' => true,]);
-            $twig->addExtension(new \Twig\Extension\DebugExtension());
+            $isDev = Config::isDev();
+
+            $loader = new \Twig\Loader\FilesystemLoader(dirname(__DIR__) . '/App/Views');
+
+            $twig = new \Twig\Environment($loader, [
+                'debug' => $isDev,
+                'cache' => $isDev ? false : dirname(__DIR__) . '/cache/twig',
+            ]);
+
+            if ($isDev) {
+                $twig->addExtension(new \Twig\Extension\DebugExtension());
+            }
         }
 
-        echo $twig->render($template, View::setDefaultVariables($args));
+        echo $twig->render($template, self::setDefaultVariables($args));
     }
 
-
-
     /**
-     * Ajoute les données à fournir à toutes les pages
+     * Ajoute les variables disponibles dans toutes les vues
+     *
      * @param array $args
      * @return array
      */
-    public static function setDefaultVariables($args = []){
-
-        $args["user"] = isset($_SESSION['user']) ? $_SESSION['user'] : null;
+    private static function setDefaultVariables(array $args = []): array
+    {
+        $args['user'] = $_SESSION['user'] ?? null;
 
         return $args;
     }
