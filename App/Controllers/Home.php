@@ -3,24 +3,28 @@
 namespace App\Controllers;
 
 use App\Models\Articles;
-use \Core\View;
-use Exception;
+use Core\Error;
+use Core\View;
 
 /**
- * Home controller
+ * Contrôleur Home
  */
 class Home extends \Core\Controller
 {
-
     /**
      * Affiche la page d'accueil
-     *
-     * @return void
-     * @throws \Exception
      */
-    public function indexAction()
+    public function indexAction(): void
     {
+        try {
+            $total = Articles::countAll();
+        } catch (\Exception $e) {
+            Error::log('ERROR', "Erreur indexAction : " . $e->getMessage());
+            $total = 0;
+        }
 
-        View::renderTemplate('Home/index.html', []);
+        View::renderTemplate('Home/index.html', [
+            'total_articles' => $total,
+        ]);
     }
 }

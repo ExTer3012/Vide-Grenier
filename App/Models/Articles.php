@@ -14,10 +14,6 @@ class Articles extends Model
 {
     /**
      * Retourne tous les articles avec filtre de tri optionnel.
-     *
-     * @param string $filter 'views' | 'date' | ''
-     * @return array
-     * @throws Exception
      */
     public static function getAll(string $filter = ''): array
     {
@@ -35,22 +31,17 @@ class Articles extends Model
             case 'views':
                 $sql .= ' ORDER BY a.views DESC';
                 break;
-            case 'date':  // Bug corrigé : était 'data'
+            case 'date':
                 $sql .= ' ORDER BY a.published_date DESC';
                 break;
         }
 
         $stmt = $db->query($sql);
-
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     /**
-     * Retourne un article par son ID avec les infos de l'auteur.
-     *
-     * @param int $id
-     * @return array|false
-     * @throws Exception
+     * Retourne un article par son ID.
      */
     public static function getOne(int $id)
     {
@@ -73,19 +64,14 @@ class Articles extends Model
     }
 
     /**
-     * Incrémente le compteur de vues d'un article.
-     *
-     * @param int $id
-     * @throws Exception
+     * Incrémente le compteur de vues.
      */
     public static function addOneView(int $id): void
     {
         $db = static::getDB();
 
         $stmt = $db->prepare('
-            UPDATE articles
-            SET views = views + 1
-            WHERE id = :id
+            UPDATE articles SET views = views + 1 WHERE id = :id
         ');
 
         $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
@@ -94,10 +80,6 @@ class Articles extends Model
 
     /**
      * Retourne les articles d'un utilisateur.
-     *
-     * @param int $userId
-     * @return array
-     * @throws Exception
      */
     public static function getByUser(int $userId): array
     {
@@ -119,9 +101,6 @@ class Articles extends Model
 
     /**
      * Retourne les 10 articles les plus récents (suggestions).
-     *
-     * @return array
-     * @throws Exception
      */
     public static function getSuggest(): array
     {
@@ -138,16 +117,11 @@ class Articles extends Model
         ');
 
         $stmt->execute();
-
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     /**
      * Enregistre un nouvel article.
-     *
-     * @param array $data ['name', 'description', 'user_id']
-     * @return int ID du nouvel article
-     * @throws Exception
      */
     public static function save(array $data): int
     {
@@ -163,35 +137,39 @@ class Articles extends Model
         $stmt->bindParam(':description',    $data['description']);
         $stmt->bindParam(':user_id',        $data['user_id'], \PDO::PARAM_INT);
         $stmt->bindParam(':published_date', $date);
-
         $stmt->execute();
 
         $id = (int) $db->lastInsertId();
-
-        Error::log('INFO', "Nouvel article créé : ID={$id}, user_id={$data['user_id']}");
+        Error::log('INFO', "Nouvel article créé : ID={$id}");
 
         return $id;
     }
 
     /**
      * Associe une image à un article.
-     *
-     * @param int    $articleId
-     * @param string $pictureName
-     * @throws Exception
      */
     public static function attachPicture(int $articleId, string $pictureName): void
     {
         $db = static::getDB();
 
         $stmt = $db->prepare('
-            UPDATE articles
-            SET picture = :picture
-            WHERE id = :id
+            UPDATE articles SET picture = :picture WHERE id = :id
         ');
 
         $stmt->bindParam(':picture', $pictureName);
         $stmt->bindParam(':id',      $articleId, \PDO::PARAM_INT);
         $stmt->execute();
+    }
+
+    // NOUVELLE FONCTIONNALITE — compteur d'articles
+
+    /**
+     * Retourne le nombre total d'articles disponibles.
+     */
+    public static function countAll(): int
+    {
+        $db   = static::getDB();
+        $stmt = $db->query('SELECT COUNT(id) FROM articles');
+        return (int) $stmt->fetchColumn();
     }
 }
