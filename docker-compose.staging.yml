@@ -8,6 +8,8 @@ services:
     image: vgl_app:staging
     container_name: vgl_app_staging
     restart: unless-stopped
+    volumes:
+      - ./public/storage:/var/www/html/public/storage
     ports:
       - "8081:80"
     env_file:

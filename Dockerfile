@@ -1,4 +1,6 @@
-# Stage 1 — Compilation CSS
+# =============================================================
+# Stage 1 — Compilation des assets CSS
+# =============================================================
 FROM node:20-alpine AS assets
 
 WORKDIR /app
@@ -7,7 +9,9 @@ RUN npm install
 COPY style/ ./style/
 RUN npm run build
 
-# Stage 2 — Image PHP/Apache finale
+# =============================================================
+# Stage 2 — Image PHP/Apache finale (légère, sans Node.js)
+# =============================================================
 FROM php:8.2-apache
 
 RUN apt-get update && apt-get install -y \
@@ -32,8 +36,9 @@ COPY --from=assets /app/public/style/ ./public/style/
 
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-RUN mkdir -p public/storage \
-    && chown -R www-data:www-data public/storage \
-    && chmod -R 775 public/storage
+# Permissions sur tous les dossiers écrits par Apache
+RUN mkdir -p public/storage logs cache/twig \
+    && chown -R www-data:www-data public/storage logs cache/twig \
+    && chmod -R 775 public/storage logs cache/twig
 
 EXPOSE 80

@@ -8,6 +8,8 @@ services:
     image: vgl_app:latest
     container_name: vgl_app_prod
     restart: always
+    volumes:
+      - ./public/storage:/var/www/html/public/storage
     ports:
       - "80:80"
     env_file:
